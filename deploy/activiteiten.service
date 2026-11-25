@@ -1,0 +1,18 @@
+[Unit]
+Description=Activiteitenformulier (webapp)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=activiteiten
+Group=activiteiten
+WorkingDirectory=/opt/activiteiten
+EnvironmentFile=/etc/activiteiten.env
+ExecStart=/bin/sh -c 'exec /opt/activiteiten/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port "$${PORT:-8080}" --proxy-headers --no-server-header'
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

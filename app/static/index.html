@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1f45a8">
+<title>Activiteiten</title>
+<style>
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#10161d);--ink:light-dark(#16202a,#e7edf3);--mute:light-dark(#5d6b78,#93a1ae);
+--line:light-dark(#dfe4ea,#26313c);--soft:light-dark(#f4f6f8,#18212a);--pen:light-dark(#1f45a8,#8fb0ff);
+--L:light-dark(#e6e9fb,#252b4d);--Lk:light-dark(#3943a0,#aab3ff);
+--Z:light-dark(#fdf1dc,#3b2e17);--Zk:light-dark(#8a5a07,#f1c470);
+--S:light-dark(#dff3e6,#173525);--Sk:light-dark(#1f6b3d,#8fdcaa);
+--g:light-dark(#fff,#151d26);--s1:light-dark(#257de0,#338ced);--s2:light-dark(#f47230,#e76624)}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:clip}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--pen);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(4vw,14px) 120px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;justify-content:space-between}
+h1{font-size:clamp(26px,5vw,34px);line-height:1.05;margin:4px 0;font-weight:700}
+.datebar{display:flex;align-items:center;gap:6px}
+.ib{min-width:44px;height:44px;border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:20px}
+.date{font-weight:600;font-size:17px;min-width:9.5em;text-align:center;white-space:nowrap;position:relative}
+.date input{position:absolute;inset:0;opacity:0}
+nav{display:flex;gap:2px;margin:16px 0 10px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav a{padding:10px 12px;text-decoration:none;color:var(--mute);font-weight:600;border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
+nav a.on{color:var(--ink);border-color:var(--pen)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;color:var(--mute);font-size:14px;margin:6px 0 12px}
+.meta b{color:var(--ink)}
+.lnk{background:none;border:0;color:var(--pen);font-weight:600;padding:8px 0;min-height:44px}
+.garmin{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 14px;font-size:14px;color:var(--mute)}
+.garmin b{color:var(--ink)}
+.garmin .acts{margin-top:6px}
+.grid,.gh{display:grid;grid-template-columns:58px minmax(0,1fr) 40px 40px;grid-auto-rows:46px;column-gap:8px}
+.t{grid-column:1;font-variant-numeric:tabular-nums;color:var(--mute);font-size:15px;padding-top:2px;text-align:right;white-space:nowrap;border-top:1px solid var(--line)}
+.t.h{color:var(--ink);font-weight:600}
+.gh{column-gap:8px;font-size:12px;color:var(--mute);text-align:right;margin-bottom:2px;grid-auto-rows:auto}.gh span:nth-child(1){grid-column:3}.gh span:nth-child(2){grid-column:4}
+.hrc{grid-column:4;font-size:12px;color:var(--mute);text-align:right;padding-top:4px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bbc{grid-column:3;font-size:12px;color:var(--mute);text-align:right;padding-top:4px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bbh{grid-column:3;font-size:11px;color:var(--mute);text-align:right;align-self:end}
+.e{grid-column:2;border:0;border-top:1px solid var(--line);background:none;text-align:left;color:transparent;padding:0 10px;font-size:14px}
+.e.sg{color:var(--mute);font-style:italic}
+.e:hover,.e:focus-visible{color:var(--mute);background:var(--soft)}
+.b{grid-column:2;margin:3px 0;border-radius:10px;border:0;text-align:left;padding:6px 12px;display:flex;flex-direction:column;overflow:hidden;background:var(--soft)}
+.b.L{background:var(--L)}.b.Z{background:var(--Z)}.b.S{background:var(--S)}
+.b strong{font-size:16px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b small{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pk{font-weight:700}.pk.L{color:var(--Lk)}.pk.Z{color:var(--Zk)}.pk.S{color:var(--Sk)}
+.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:max(18px,env(safe-area-inset-bottom));height:54px;padding:0 26px;border-radius:27px;border:0;background:var(--pen);color:var(--bg);font-weight:700;font-size:17px;box-shadow:0 6px 20px rgb(0 0 0/.18);z-index:5}
+.ov{position:fixed;inset:0;background:rgb(10 16 24/.45);display:none;z-index:9;align-items:flex-end;justify-content:center}
+.ov.on{display:flex}
+.sheet{background:var(--bg);width:min(640px,100%);max-height:94vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 18px max(22px,env(safe-area-inset-bottom))}
+.sheet h2{font-size:22px;margin:0 0 10px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.f{display:block;font-size:14px;color:var(--mute);font-weight:600;margin:14px 0 6px}
+select,input[type=text]{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px;font-size:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:1px solid var(--line);background:var(--soft);border-radius:20px;padding:0 14px;min-height:38px;font-size:15px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{height:50px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:600}
+.seg button.on.L{background:var(--L);border-color:var(--Lk);color:var(--Lk)}
+.seg button.on.Z{background:var(--Z);border-color:var(--Zk);color:var(--Zk)}
+.seg button.on.S{background:var(--S);border-color:var(--Sk);color:var(--Sk)}
+.sc{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:4px}
+.sc button{height:44px;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-variant-numeric:tabular-nums;font-weight:600;padding:0}
+.sc button.on{background:var(--pen);border-color:var(--pen);color:var(--bg)}
+.chk{display:flex;gap:10px;align-items:center;margin-top:12px;min-height:44px}
+.chk input{width:22px;height:22px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.btn{height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:700;text-decoration:none;display:inline-flex;align-items:center}
+.btn.pri{background:var(--pen);border-color:var(--pen);color:var(--bg)}
+.sheet .btn.pri{flex:1;justify-content:center}
+.btn.del{color:#c0392b}
+.paper{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 2px 14px rgb(0 0 0/.08);overflow:hidden}
+.paper canvas{display:block;width:100%;height:auto}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:14px 0}
+.card h3{margin:0 0 4px;font-size:18px}
+.fl{list-style:none;padding:0;margin:8px 0 0}
+.fl li{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);min-height:46px}
+.fl li span{flex:1}
+.x{width:44px;height:44px;border:0;background:none;font-size:20px;color:var(--mute)}
+.note{font-size:14px;color:var(--mute)}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;display:none;z-index:20}
+.fig{position:relative;height:220px;margin:8px 0}
+.fig svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.leg{display:flex;gap:16px;font-size:14px;color:var(--mute);flex-wrap:wrap}
+.leg i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;padding:6px 9px;border-radius:8px;white-space:nowrap;display:none;z-index:2}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:6px 8px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+th{color:var(--mute);font-weight:600}th:first-child,td:first-child{text-align:left}
+@media(max-width:600px){.date{min-width:0;font-size:16px}.sc{grid-template-columns:repeat(6,minmax(0,1fr))}.grid,.gh{grid-template-columns:48px minmax(0,1fr) 32px 32px}}
+@media(prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.4}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Activiteiten</h1>
+    <div class="datebar">
+      <button class="ib" id="prev" aria-label="Vorige dag">‹</button>
+      <label class="date"><span id="dlabel"></span><input type="date" id="dpick" aria-label="Kies datum"></label>
+      <button class="ib" id="next" aria-label="Volgende dag">›</button>
+    </div>
+  </header>
+  <nav><a href="#dag" id="n-dag">Dag</a><a href="#formulier" id="n-formulier">Formulier</a><a href="#trends" id="n-trends">Trends</a><a href="#instellingen" id="n-instellingen">Instellingen</a></nav>
+
+  <section id="v-dag">
+    <div class="meta"><span><b id="cnt">0</b> van 34 vakjes ingevuld</span><span id="sync"></span><button class="lnk" id="copyY">Gisteren overnemen</button></div>
+    <div class="garmin" id="gbox" hidden></div>
+    <div class="gh" id="gh" hidden><span title="Body Battery">BB</span><span title="Gemiddelde hartslag">Hart</span></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section id="v-formulier" hidden>
+    <p class="note">Het Meander-formulier, ingevuld met je gegevens van deze dag.</p>
+    <div class="bar"><button class="btn pri" id="pdf">Download PDF</button><button class="btn" id="png">Download afbeelding</button><button class="btn" id="print">Afdrukken</button></div>
+    <div class="paper"><canvas id="cv" width="1240" height="1769"></canvas></div>
+  </section>
+
+  <section id="v-trends" hidden>
+    <div class="bar"><select id="span" style="width:auto"><option value="14">14 dagen</option><option value="30" selected>30 dagen</option><option value="90">90 dagen</option></select></div>
+    <div class="card"><h3>Moeheid en pijn, daggemiddelde</h3>
+      <div class="leg"><span><i style="background:var(--s1)"></i>Moeheid</span><span><i style="background:var(--s2)"></i>Pijn</span></div>
+      <div class="fig" id="f1"><svg></svg><div class="tip"></div></div></div>
+    <div class="card"><h3>Body Battery, laagste tot hoogste per dag</h3>
+      <div class="fig" id="f2"><svg></svg><div class="tip"></div></div>
+      <p class="note" id="f2n"></p></div>
+    <div class="card"><h3>Rusthartslag (slagen per minuut)</h3>
+      <div class="fig" id="f3"><svg></svg><div class="tip"></div></div></div>
+    <div class="card"><h3>HRV 's nachts (ms)</h3>
+      <div class="fig" id="f4"><svg></svg><div class="tip"></div></div>
+      <p class="note">Het lichte vlak is je gebalanceerde bereik volgens Garmin.</p></div>
+    <div class="card"><h3>Per dag</h3><div class="tbl"><table id="tt"></table></div></div>
+  </section>
+
+  <section id="v-instellingen" hidden>
+    <div class="card"><h3>Naam op het formulier</h3><input type="text" id="naam" placeholder="Je naam" autocomplete="name"></div>
+    <div class="card"><h3>Favorieten</h3><p class="note">Tik in het invulscherm op een favoriet om activiteit en houding in één keer te kiezen.</p>
+      <div class="row" style="grid-template-columns:1fr 130px 100px;margin-top:8px"><input type="text" id="fa" placeholder="Nieuwe activiteit"><select id="fp"><option value="L">Liggen</option><option value="Z" selected>Zitten</option><option value="S">Staan/lopen</option></select><button class="btn" id="fadd">Toevoegen</button></div>
+      <ul class="fl" id="flist"></ul></div>
+    <div class="card"><h3>Gegevens</h3><p class="note">Alle dagen als CSV. Met importeren haal je de CSV uit de claude.ai-versie binnen; bestaande vakjes worden niet overschreven.</p>
+      <div class="acts"><a class="btn" href="/api/export.csv">Download alle dagen (CSV)</a><label class="btn">CSV importeren<input type="file" id="imp" accept=".csv,text/csv" hidden></label></div></div>
+  </section>
+</div>
+
+<button class="fab" id="fab">+ Blok invullen</button>
+
+<div class="ov" id="ov"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh">
+  <h2 id="sh">Blok invullen</h2>
+  <div class="row"><div><label class="f" for="van">Van</label><select id="van"></select></div><div><label class="f" for="tot">Tot</label><select id="tot"></select></div></div>
+  <label class="f" for="act">Activiteit</label>
+  <input type="text" id="act" placeholder="Bijv. slapen, werken, wandelen" autocomplete="off">
+  <div class="chips" id="chips"></div>
+  <label class="f">Houding</label>
+  <div class="seg" id="pos"><button data-p="L" class="L">Liggen</button><button data-p="Z" class="Z">Zitten</button><button data-p="S" class="S">Staan/lopen</button></div>
+  <label class="f">Moeheid 0–10</label><div class="sc" id="sm"></div>
+  <label class="f">Pijn 0–10</label><div class="sc" id="sp"></div>
+  <label class="f" for="nt">Opmerking (lege kolom)</label><input type="text" id="nt" maxlength="20">
+  <label class="chk"><input type="checkbox" id="asfav"> Bewaar als favoriet</label>
+  <div class="acts"><button class="btn pri" id="save">Opslaan</button><button class="btn" id="cancel">Annuleren</button><button class="btn del" id="clear">Wissen</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="/static/jspdf.umd.min.js"></script>
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const N=34, tm=i=>{if(i>=N)return '23:30';const m=390+30*i;return String(Math.floor(m/60)).padStart(2,'0')+':'+(m%60?'30':'00')};
+const PN={L:'Liggen',Z:'Zitten',S:'Staan/lopen'};
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const pd=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+let date=iso(new Date()), slots=Array(N).fill(null), gar=null, settings={naam:'',favs:[]}, gConf=false;
+const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};
+const sync=m=>$('sync').textContent=m;
+async function api(path,opt={}){const r=await fetch(path,{headers:{'Content-Type':'application/json'},...opt});if(!r.ok){let e='';try{e=(await r.json()).error||''}catch(x){}throw new Error(e||('HTTP '+r.status))}return r.json()}
+
+/* ---------- opslag ---------- */
+let chain=Promise.resolve();
+function saveDay(){const d=date,body=JSON.stringify({slots});sync('Opslaan…');chain=chain.then(()=>api('/api/day/'+d,{method:'PUT',body})).then(()=>sync('Opgeslagen')).catch(()=>sync('Opslaan mislukt, probeer opnieuw'));render()}
+function saveSettings(){api('/api/settings',{method:'PUT',body:JSON.stringify(settings)}).catch(()=>toast('Instellingen niet opgeslagen'))}
+let loadSeq=0;
+async function loadDay(){const seq=++loadSeq;slots=Array(N).fill(null);gar=null;render();
+  try{const r=await api('/api/day/'+date);if(seq!==loadSeq)return;slots=r.slots;gar=r.garmin;sync('');render()}catch(e){sync('Server niet bereikbaar')}}
+
+/* ---------- Garmin-voorstellen ---------- */
+function suggestions(){
+  const s=Array(N).fill(null);if(!gar)return s;
+  const ivs=[...(gar.sleep||[]).map(v=>({...v,a:'Slapen',p:'L'})),...(gar.naps||[]).map(v=>({...v,a:'Dutje',p:'L'})),...(gar.activities||[]).map(v=>({...v,a:v.label,p:v.p||'S'}))];
+  for(let i=0;i<N;i++){const a=390+30*i,b=a+30;let best=null,bo=0;for(const v of ivs){const o=Math.min(b,v.e)-Math.max(a,v.s);if(o>bo){bo=o;best=v}}if(best&&bo>=15)s[i]={a:best.a,p:best.p}}
+  return s;
+}
+function garminBox(){
+  const g=$('gbox');if(!gConf){g.hidden=true;return}g.hidden=false;
+  if(!gar){g.innerHTML='Nog geen Garmin-gegevens voor deze dag. <div class="acts"><button class="btn" id="gsync">Nu ophalen</button></div>';$('gsync').onclick=gsync;return}
+  const parts=[];
+  for(const v of gar.sleep||[])parts.push(`slaap ${esc(v.van)}–${esc(v.tot)}`);
+  for(const v of gar.naps||[])parts.push(`dutje ${esc(v.van)}–${esc(v.tot)}`);
+  for(const v of gar.activities||[])parts.push(`${esc(v.label)} ${esc(v.van)}–${esc(v.tot)}`);
+  const st=[gar.steps!=null?`${Number(gar.steps).toLocaleString('nl-NL')} stappen`:'',gar.bb_min!=null?`Body Battery ${gar.bb_min}–${gar.bb_max}`:'',gar.rhr!=null?`rusthartslag ${gar.rhr}`:'',gar.hrv&&gar.hrv.night!=null?`HRV ${gar.hrv.night} ms`:''].filter(Boolean).join(' · ');
+  const n=suggestions().filter((v,i)=>v&&!slots[i]).length;
+  g.innerHTML=`<b>Garmin</b>: ${parts.join(', ')||'geen slaap of activiteiten'}${st?'<br>'+st:''}<div class="acts">${n?`<button class="btn pri" id="gfill">${n} lege vakjes voorinvullen</button>`:''}<button class="btn" id="gsync">Vernieuwen</button></div>`;
+  if(n)$('gfill').onclick=()=>{const s=suggestions();slots=slots.map((v,i)=>v||(s[i]?{a:s[i].a,p:s[i].p,m:null,s:null,n:''}:null));saveDay();toast('Voorgevuld; vul moeheid en pijn per blok aan')};
+  $('gsync').onclick=gsync;
+}
+async function gsync(){const b=$('gsync');if(b){b.disabled=true;b.textContent='Ophalen…'}
+  try{const r=await api('/api/garmin/sync/'+date,{method:'POST'});gar=r.garmin;render();toast('Garmin bijgewerkt')}catch(e){toast(e.message);garminBox()}}
+
+/* ---------- dagweergave ---------- */
+const same=(x,y)=>x&&y&&x.a===y.a&&x.p===y.p&&x.m===y.m&&x.s===y.s&&(x.n||'')===(y.n||'');
+function blocks(){const out=[];let i=0;while(i<N){if(!slots[i]){i++;continue}let j=i+1;while(j<N&&same(slots[i],slots[j]))j++;out.push({i,j,v:slots[i]});i=j}return out}
+function render(){
+  const d=pd(date);
+  $('dlabel').textContent=d.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'});$('dpick').value=date;
+  const sg=suggestions(),bb=gar&&gar.bb||[],hr=gar&&gar.hr||[];$('gh').hidden=!gar;
+  let h='';for(let i=0;i<N;i++){h+=`<div class="t${i%2?' h':''}" style="grid-row:${i+1}">${tm(i)}</div>`;if(gar)h+=`<div class="bbc" style="grid-row:${i+1}" title="Body Battery">${bb[i]!=null?esc(bb[i]):''}</div><div class="hrc" style="grid-row:${i+1}" title="Gemiddelde hartslag">${hr[i]!=null?esc(hr[i]):''}</div>`}
+  for(let i=0;i<N;i++)if(!slots[i])h+=`<button class="e${sg[i]?' sg':''}" style="grid-row:${i+1}" data-i="${i}" aria-label="Invullen vanaf ${tm(i)}">${sg[i]?esc(sg[i].a)+'?':'+'}</button>`;
+  for(const b of blocks()){const v=b.v,sc=[v.m!=null?'moeheid '+v.m:'',v.s!=null?'pijn '+v.s:''].filter(Boolean).join(' · ');
+    h+=`<button class="b ${esc(v.p)}" style="grid-row:${b.i+1}/${b.j+1}" data-b="${b.i},${b.j}"><strong>${esc(v.a)}</strong><small>${tm(b.i)}–${tm(b.j)} · <span class="pk ${esc(v.p)}">${esc(PN[v.p]||'geen houding')}</span>${sc?' · '+sc:''}${v.n?' · '+esc(v.n):''}</small></button>`}
+  $('grid').innerHTML=h;
+  $('cnt').textContent=slots.filter(Boolean).length;
+  $('copyY').hidden=slots.some(Boolean);
+  garminBox();
+  if(route()==='formulier')drawPreview();
+}
+$('grid').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.i!=null){const i=+t.dataset.i,sg=suggestions();let j=i+1;
+    if(sg[i])while(j<N&&!slots[j]&&sg[j]&&sg[j].a===sg[i].a)j++;
+    open(i,j,null,sg[i])}
+  else{const[i,j]=t.dataset.b.split(',').map(Number);open(i,j,slots[i])}});
+
+/* ---------- invulscherm ---------- */
+let ed={orig:null,p:'',m:null,s:null};
+function opts(sel,from,to,val){sel.innerHTML='';for(let k=from;k<=to;k++){const o=document.createElement('option');o.value=k;o.textContent=tm(k);sel.appendChild(o)}sel.value=val}
+function nowSlot(){const n=new Date();if(iso(n)!==date)return null;const m=n.getHours()*60+n.getMinutes();return Math.max(0,Math.min(N,Math.round((m-390)/30)))}
+function open(i,j,v,pre){
+  ed={orig:v?[i,j]:null,p:v?v.p:(pre?pre.p:''),m:v?v.m:null,s:v?v.s:null};
+  opts($('van'),0,N-1,i);opts($('tot'),1,N,j);
+  $('act').value=v?v.a:(pre?pre.a:'');$('nt').value=v&&v.n||'';$('asfav').checked=false;
+  $('sh').textContent=v?'Blok aanpassen':'Blok invullen';$('clear').hidden=!v;
+  chips();paint();$('ov').classList.add('on');if(!pre)setTimeout(()=>$('act').focus(),50);
+}
+function close(){$('ov').classList.remove('on')}
+function paint(){for(const b of $('pos').children)b.classList.toggle('on',b.dataset.p===ed.p);
+  for(const[id,k]of[['sm','m'],['sp','s']])for(const b of $(id).children)b.classList.toggle('on',+b.dataset.v===ed[k])}
+function chips(){$('chips').innerHTML=settings.favs.map((f,k)=>`<button class="chip" data-k="${k}">${esc(f.a)}</button>`).join('')}
+for(const id of['sm','sp'])$(id).innerHTML=Array.from({length:11},(_,k)=>`<button data-v="${k}">${k}</button>`).join('');
+$('chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const f=settings.favs[+b.dataset.k];$('act').value=f.a;ed.p=f.p;paint()});
+$('pos').addEventListener('click',e=>{const b=e.target.closest('button');if(b){ed.p=ed.p===b.dataset.p?'':b.dataset.p;paint()}});
+$('sm').addEventListener('click',e=>{const b=e.target.closest('button');if(b){ed.m=ed.m===+b.dataset.v?null:+b.dataset.v;paint()}});
+$('sp').addEventListener('click',e=>{const b=e.target.closest('button');if(b){ed.s=ed.s===+b.dataset.v?null:+b.dataset.v;paint()}});
+$('van').addEventListener('change',()=>{const v=+$('van').value;if(+$('tot').value<=v)$('tot').value=v+1});
+$('tot').addEventListener('change',()=>{const t=+$('tot').value;if(+$('van').value>=t)$('van').value=t-1});
+$('cancel').onclick=close;
+$('ov').addEventListener('click',e=>{if(e.target===$('ov'))close()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+$('save').onclick=()=>{
+  const a=$('act').value.trim();if(!a){$('act').focus();toast('Vul een activiteit in');return}
+  const i=+$('van').value,j=+$('tot').value;
+  if(ed.orig)for(let k=ed.orig[0];k<ed.orig[1];k++)slots[k]=null;
+  const v={a,p:ed.p,m:ed.m,s:ed.s,n:$('nt').value.trim()};
+  for(let k=i;k<j;k++)slots[k]={...v};
+  if($('asfav').checked&&!settings.favs.some(f=>f.a.toLowerCase()===a.toLowerCase())){settings={...settings,favs:[...settings.favs,{a,p:ed.p||'Z'}]};saveSettings();renderFavs()}
+  close();saveDay();toast(`${tm(i)}–${tm(j)} ingevuld`);
+};
+$('clear').onclick=()=>{if(!ed.orig)return;for(let k=ed.orig[0];k<ed.orig[1];k++)slots[k]=null;close();saveDay();toast('Blok gewist')};
+$('fab').onclick=()=>{let i=slots.findIndex(s=>!s);if(i<0)i=N-1;let j=nowSlot();if(j==null||j<=i)j=i+1;for(let k=i;k<j;k++)if(slots[k]){j=k;break}open(i,j,null)};
+$('copyY').onclick=async()=>{const y=pd(date);y.setDate(y.getDate()-1);
+  try{const r=await api('/api/day/'+iso(y));if(!r.slots.some(Boolean)){toast('Gisteren is nog leeg');return}slots=r.slots;saveDay();toast('Gisteren overgenomen, pas aan waar nodig')}catch(e){toast('Ophalen mislukt')}};
+
+/* ---------- datum en routes ---------- */
+const shift=n=>{const d=pd(date);d.setDate(d.getDate()+n);date=iso(d);loadDay();if(route()==='trends')loadTrend()};
+$('prev').onclick=()=>shift(-1);$('next').onclick=()=>shift(1);
+$('dpick').addEventListener('change',e=>{if(e.target.value){date=e.target.value;loadDay()}});
+const R=['dag','formulier','trends','instellingen'];
+const route=()=>R.includes(location.hash.slice(1))?location.hash.slice(1):'dag';
+function show(){const r=route();for(const v of R){$('v-'+v).hidden=v!==r;$('n-'+v).classList.toggle('on',v===r)}$('fab').hidden=r!=='dag';if(r==='formulier')drawPreview();if(r==='trends')loadTrend()}
+addEventListener('hashchange',show);
+
+/* ---------- het papieren formulier (pixels van de originele scan, 1806 x 2576) ---------- */
+const W0=1806,H0=2576;
+const RY=[350,411,471,531,593,652,714,773,835,896,955,1017,1075,1136,1194,1255,1314,1374,1433,1494,1553,1613,1673,1734,1796,1855,1917,1977,2039,2099,2160,2219,2281,2339,2402];
+const XT=[69,187,752,910,1066,1221,1375,1551,1697],XB=[57,176,746,904,1061,1216,1371,1549,1697];
+const X=(c,y)=>XT[c]+(XB[c]-XT[c])*(y-385)/1980;
+const PCOL={L:3,Z:4,S:5};
+let img=null;
+const imgReady=new Promise(res=>{const im=new Image();im.onload=()=>{img=im;res(im)};im.onerror=()=>res(null);im.src='/static/form.jpg'});
+function fillForm(g){
+  const dd=pd(date);
+  g.text(settings.naam||'',190,166,34,'left');
+  g.text(dd.toLocaleDateString('nl-NL',{weekday:'long'})+' '+dd.getDate()+'-'+(dd.getMonth()+1)+'-'+dd.getFullYear(),815,166,34,'left');
+  for(const b of blocks()){const v=b.v;
+    for(let r=b.i;r<b.j;r++){
+      const y0=RY[r],y1=RY[r+1],cy=(y0+y1)/2,base=y0+(y1-y0)*.7;
+      if(r===b.i){const x1=X(1,cy)+14,mw=X(2,cy)-x1-12;let sz=30;while(sz>18&&g.w(v.a,sz)>mw)sz--;let t=v.a;while(t.length>1&&g.w(t,sz)>mw)t=t.slice(0,-1);g.text(t,x1,base,sz,'left')}
+      else if(r===b.i+1){const xl=X(1,cy)+26,yb=RY[b.j]-14;g.line(xl,y0+8,xl,yb,2.5);g.line(xl-9,yb-12,xl,yb,2.5);g.line(xl+9,yb-12,xl,yb,2.5)}
+      if(v.n&&r===b.i){const x1=X(2,cy)+8,mw=X(3,cy)-x1-8;let sz=24;while(sz>14&&g.w(v.n,sz)>mw)sz--;g.text(v.n,x1,base,sz,'left')}
+      const pc=PCOL[v.p];if(pc!=null)g.text('X',(X(pc,cy)+X(pc+1,cy))/2,base,32,'center');
+      if(v.m!=null)g.text(String(v.m),(X(6,cy)+X(7,cy))/2,base,32,'center');
+      if(v.s!=null)g.text(String(v.s),(X(7,cy)+X(8,cy))/2,base,32,'center');
+    }}
+}
+function canvasG(cv){const c=cv.getContext('2d'),k=cv.width/W0,ky=cv.height/H0;c.fillStyle=c.strokeStyle='#1f45a8';c.lineCap='round';
+  const f=sz=>c.font=`600 ${sz*k}px Helvetica, Arial, sans-serif`;
+  return{text(s,x,y,sz,al){f(sz);c.textAlign=al;c.fillText(s,x*k,y*ky)},w(s,sz){f(sz);return c.measureText(s).width/k},line(a,b,x,y,lw){c.lineWidth=lw*k;c.beginPath();c.moveTo(a*k,b*ky);c.lineTo(x*k,y*ky);c.stroke()}}}
+async function renderCanvas(cv){await imgReady;const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,cv.width,cv.height);if(img)c.drawImage(img,0,0,cv.width,cv.height);fillForm(canvasG(cv))}
+function drawPreview(){renderCanvas($('cv'))}
+function download(name,blob){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}
+async function makePdf(){
+  await imgReady;const doc=new jspdf.jsPDF({unit:'mm',format:'a4'});const sx=210/W0,sy=297/H0;
+  if(img){const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext('2d').drawImage(img,0,0);doc.addImage(c.toDataURL('image/jpeg',.85),'JPEG',0,0,210,297)}
+  doc.setTextColor(31,69,168);doc.setDrawColor(31,69,168);doc.setFont('helvetica','bold');
+  const pt=sz=>sz*sy/.3528;
+  fillForm({text(s,x,y,sz,al){doc.setFontSize(pt(sz));doc.text(s,x*sx,y*sy,{align:al})},w(s,sz){doc.setFontSize(pt(sz));return doc.getTextWidth(s)/sx},line(a,b,x,y,lw){doc.setLineWidth(lw*sx);doc.line(a*sx,b*sy,x*sx,y*sy)}});
+  return doc;
+}
+$('pdf').onclick=async()=>{if(!window.jspdf){toast('PDF-module niet geladen');return}download(`activiteiten-${date}.pdf`,(await makePdf()).output('blob'))};
+$('print').onclick=async()=>{if(!window.jspdf){toast('PDF-module niet geladen');return}const d=await makePdf();d.autoPrint();window.open(d.output('bloburl'),'_blank')};
+$('png').onclick=async()=>{const c=document.createElement('canvas');c.width=W0;c.height=H0;await renderCanvas(c);c.toBlob(b=>b&&download(`activiteiten-${date}.png`,b),'image/png')};
+
+/* ---------- trends ---------- */
+let trend=[];
+async function loadTrend(){try{trend=(await api(`/api/trend?days=${$('span').value}&end=${date}`)).rows;drawTrend()}catch(e){toast('Trends niet geladen')}}
+$('span').onchange=loadTrend;
+const fmtD=s=>{const d=pd(s);return d.getDate()+'/'+(d.getMonth()+1)};
+function chart(fig,lo,max,series,band){
+  const svg=fig.querySelector('svg'),tip=fig.querySelector('.tip'),W=fig.clientWidth,H=fig.clientHeight,L=30,Rr=8,T=8,B=24,n=trend.length;
+  if(!W)return;const x=i=>L+(n<2?0:(W-L-Rr)*i/(n-1)),y=v=>T+(H-T-B)*(1-(Math.min(max,Math.max(lo,v))-lo)/(max-lo));
+  let h='';for(const t of[lo,Math.round((lo+max)/2),max])h+=`<line x1="${L}" x2="${W-Rr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end" font-size="11" fill="var(--mute)">${t}</text>`;
+  const step=Math.ceil(n/(W<520?4:7));trend.forEach((r,i)=>{if(i%step===0||i===n-1)h+=`<text x="${x(i)}" y="${H-6}" text-anchor="middle" font-size="11" fill="var(--mute)">${fmtD(r.date)}</text>`});
+  if(band==='hrv'){let up='',dn='';trend.forEach((r,i)=>{if(r.hrv_low!=null&&r.hrv_high!=null){up+=(up?'L':'M')+x(i)+','+y(r.hrv_high);dn=`L${x(i)},${y(r.hrv_low)}`+dn}});if(up)h+=`<path d="${up}${dn}Z" fill="var(--s1)" opacity=".14"/>`}
+  if(band==='bb'){const bw=Math.max(2,Math.min(10,(W-L-Rr)/n*.5));trend.forEach((r,i)=>{if(r.bb_min!=null&&r.bb_max!=null)h+=`<rect x="${x(i)-bw/2}" y="${y(r.bb_max)}" width="${bw}" height="${Math.max(2,y(r.bb_min)-y(r.bb_max))}" rx="${Math.min(4,bw/2)}" fill="var(--s1)"/>`})}
+  for(const s of series){let d='',pen=false;trend.forEach((r,i)=>{const v=r[s.k];if(v==null){pen=false;return}d+=(pen?'L':'M')+x(i)+','+y(v);pen=true});
+    h+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    trend.forEach((r,i)=>{const v=r[s.k],pv=trend[i-1]?.[s.k],nv=trend[i+1]?.[s.k];if(v!=null&&pv==null&&nv==null)h+=`<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="${s.c}" stroke="var(--bg)" stroke-width="2"/>`})}
+  h+=`<line id="cx" y1="${T}" y2="${H-B}" stroke="var(--mute)" stroke-dasharray="3 3" visibility="hidden"/><rect x="${L}" y="0" width="${W-L-Rr}" height="${H}" fill="transparent"/>`;
+  svg.innerHTML=h;const cx=svg.querySelector('#cx');
+  svg.onpointermove=e=>{const bx=svg.getBoundingClientRect(),px=e.clientX-bx.left,i=Math.max(0,Math.min(n-1,Math.round((px-L)/((W-L-Rr)/Math.max(1,n-1))))),r=trend[i];
+    cx.setAttribute('x1',x(i));cx.setAttribute('x2',x(i));cx.setAttribute('visibility','visible');
+    tip.textContent=fmtD(r.date)+'  '+(band==='bb'?(r.bb_min!=null?`Body Battery ${r.bb_min}–${r.bb_max}`:'geen data'):series.map(s=>`${s.n} ${r[s.k]??'–'}`).join(' · '));
+    tip.style.display='block';tip.style.left=Math.min(W-tip.offsetWidth,Math.max(0,x(i)-tip.offsetWidth/2))+'px';tip.style.top='-8px'};
+  svg.onpointerleave=()=>{cx.setAttribute('visibility','hidden');tip.style.display='none'};
+}
+const rng=(ks,pad)=>{const v=trend.flatMap(r=>ks.map(k=>r[k])).filter(x=>x!=null);if(!v.length)return[0,100];return[Math.max(0,Math.floor((Math.min(...v)-pad)/5)*5),Math.ceil((Math.max(...v)+pad)/5)*5]};
+function drawTrend(){
+  chart($('f1'),0,10,[{k:'moeheid',c:'var(--s1)',n:'Moeheid'},{k:'pijn',c:'var(--s2)',n:'Pijn'}]);
+  chart($('f2'),0,100,[],'bb');
+  const[a,b]=rng(['rhr'],3);chart($('f3'),a,b,[{k:'rhr',c:'var(--s1)',n:'Rusthartslag'}]);
+  const[c,d]=rng(['hrv','hrv_low','hrv_high'],5);chart($('f4'),c,d,[{k:'hrv',c:'var(--s1)',n:'HRV'}],'hrv');
+  $('f2n').textContent=trend.some(r=>r.bb_max!=null)?'':'Nog geen Garmin-gegevens in deze periode.';
+  const f=v=>v==null?'–':v;
+  $('tt').innerHTML='<tr><th>Datum</th><th>Moeheid</th><th>Pijn</th><th>Liggen (u)</th><th>Slaap (u)</th><th>Stappen</th><th>Stress</th><th>Body Battery</th><th>Rust-HR</th><th>HRV</th></tr>'+
+    trend.slice().reverse().filter(r=>r.moeheid!=null||r.pijn!=null||r.bb_max!=null||r.slaap!=null||r.rhr!=null).map(r=>`<tr><td>${esc(fmtD(r.date))}</td><td>${f(r.moeheid)}</td><td>${f(r.pijn)}</td><td>${f(r.liggen)}</td><td>${f(r.slaap)}</td><td>${r.stappen==null?'–':Number(r.stappen).toLocaleString('nl-NL')}</td><td>${f(r.stress)}</td><td>${r.bb_min==null?'–':esc(r.bb_min+'–'+r.bb_max)}</td><td>${f(r.rhr)}</td><td>${f(r.hrv)}</td></tr>`).join('');
+}
+const ro=new ResizeObserver(()=>{if(route()==='trends'&&trend.length)drawTrend()});ro.observe($('f1'));
+
+/* ---------- instellingen ---------- */
+function renderFavs(){$('flist').innerHTML=settings.favs.map((f,k)=>`<li><span>${esc(f.a)}</span><span class="pk ${esc(f.p)}" style="flex:none">${esc(PN[f.p]||'')}</span><button class="x" data-k="${k}" aria-label="Verwijder ${esc(f.a)}">×</button></li>`).join('');$('naam').value=settings.naam||''}
+$('flist').addEventListener('click',e=>{const b=e.target.closest('.x');if(!b)return;settings={...settings,favs:settings.favs.filter((_,k)=>k!==+b.dataset.k)};saveSettings();renderFavs()});
+$('fadd').onclick=()=>{const a=$('fa').value.trim();if(!a)return;settings={...settings,favs:[...settings.favs,{a,p:$('fp').value}]};$('fa').value='';saveSettings();renderFavs()};
+let nt;$('naam').addEventListener('input',()=>{clearTimeout(nt);nt=setTimeout(()=>{settings={...settings,naam:$('naam').value.trim()};saveSettings()},700)});
+$('imp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const r=await fetch('/api/import',{method:'POST',body:await f.text(),headers:{'Content-Type':'text/csv'}});const j=await r.json();toast(`${j.dagen} dagen geïmporteerd`);loadDay()}catch(x){toast('Importeren mislukt')}e.target.value=''};
+
+/* ---------- start ---------- */
+show();loadDay();
+api('/api/settings').then(s=>{settings=s;renderFavs()}).catch(()=>{});
+api('/api/garmin/status').then(s=>{gConf=s.configured;render()}).catch(()=>{});
+}
+</script>
+</body>
+</html>

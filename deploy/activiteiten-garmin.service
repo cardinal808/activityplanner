@@ -1,0 +1,15 @@
+[Unit]
+Description=Activiteitenformulier: Garmin-gegevens ophalen
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=activiteiten
+Group=activiteiten
+WorkingDirectory=/opt/activiteiten
+EnvironmentFile=/etc/activiteiten.env
+ExecCondition=/bin/sh -c 'test -n "$${GARMIN_API_KEY}"'
+ExecStart=/opt/activiteiten/venv/bin/python -m app.sync
+NoNewPrivileges=true
+UMask=0077
