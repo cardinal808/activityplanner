@@ -96,6 +96,9 @@ table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{padding:6px 8px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 th{color:var(--mute);font-weight:600}th:first-child,td:first-child{text-align:left}
 @media(max-width:600px){.date{min-width:0;font-size:16px}.sc{grid-template-columns:repeat(6,minmax(0,1fr))}.grid,.gh{grid-template-columns:48px minmax(0,1fr) 32px 32px}}
+#printimg{display:none}
+@page{size:A4 portrait;margin:0}
+@media print{body>*{display:none!important}#printimg{display:block!important;width:210mm;height:297mm;object-fit:contain}html,body{margin:0;background:#fff}}
 @media(prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.4}}}
 </style>
 </head>
@@ -121,6 +124,7 @@ th{color:var(--mute);font-weight:600}th:first-child,td:first-child{text-align:le
   <section id="v-formulier" hidden>
     <p class="note">Het Meander-formulier, ingevuld met je gegevens van deze dag.</p>
     <div class="bar"><button class="btn pri" id="pdf">Download PDF</button><button class="btn" id="png">Download afbeelding</button><button class="btn" id="print">Afdrukken</button></div>
+    <label class="chk"><input type="checkbox" id="fg"> Body Battery en hartslag op het formulier (in de lege kolom)</label>
     <div class="paper"><canvas id="cv" width="1240" height="1769"></canvas></div>
   </section>
 
@@ -176,6 +180,7 @@ th{color:var(--mute);font-weight:600}th:first-child,td:first-child{text-align:le
   <div class="acts"><button class="btn pri" id="save">Opslaan</button><button class="btn" id="cancel">Annuleren</button><button class="btn del" id="clear">Wissen</button></div>
 </div></div>
 <div class="toast" id="toast"></div>
+<img id="printimg" alt="">
 
 <script src="/static/jspdf.umd.min.js"></script>
 <script>
@@ -305,12 +310,22 @@ function fillForm(g){
   const dd=pd(date);
   g.text(settings.naam||'',190,166,34,'left');
   g.text(dd.toLocaleDateString('nl-NL',{weekday:'long'})+' '+dd.getDate()+'-'+(dd.getMonth()+1)+'-'+dd.getFullYear(),815,166,34,'left');
+  const gcol=settings.formGarmin!==false&&gar&&((gar.bb||[]).some(v=>v!=null)||(gar.hr||[]).some(v=>v!=null));
+  const xm=y=>(X(2,y)+X(3,y))/2;
+  if(gcol){
+    g.text('BB',(X(2,300)+xm(300))/2,300,26,'center');g.text('Hart',(xm(300)+X(3,300))/2,300,26,'center');
+    for(let r=0;r<N;r++){const y0=RY[r],y1=RY[r+1],cy=(y0+y1)/2,base=y0+(y1-y0)*.7;
+      const bb=(gar.bb||[])[r],hr=(gar.hr||[])[r];
+      if(bb!=null)g.text(String(bb),(X(2,cy)+xm(cy))/2,base,26,'center');
+      if(hr!=null)g.text(String(hr),(xm(cy)+X(3,cy))/2,base,26,'center');}
+  }
   for(const b of blocks()){const v=b.v;
+    const label=gcol&&v.n?`${v.a} (${v.n})`:v.a;
     for(let r=b.i;r<b.j;r++){
       const y0=RY[r],y1=RY[r+1],cy=(y0+y1)/2,base=y0+(y1-y0)*.7;
-      if(r===b.i){const x1=X(1,cy)+14,mw=X(2,cy)-x1-12;let sz=30;while(sz>18&&g.w(v.a,sz)>mw)sz--;let t=v.a;while(t.length>1&&g.w(t,sz)>mw)t=t.slice(0,-1);g.text(t,x1,base,sz,'left')}
+      if(r===b.i){const x1=X(1,cy)+14,mw=X(2,cy)-x1-12;let sz=30;while(sz>18&&g.w(label,sz)>mw)sz--;let t=label;while(t.length>1&&g.w(t,sz)>mw)t=t.slice(0,-1);g.text(t,x1,base,sz,'left')}
       else if(r===b.i+1){const xl=X(1,cy)+26,yb=RY[b.j]-14;g.line(xl,y0+8,xl,yb,2.5);g.line(xl-9,yb-12,xl,yb,2.5);g.line(xl+9,yb-12,xl,yb,2.5)}
-      if(v.n&&r===b.i){const x1=X(2,cy)+8,mw=X(3,cy)-x1-8;let sz=24;while(sz>14&&g.w(v.n,sz)>mw)sz--;g.text(v.n,x1,base,sz,'left')}
+      if(!gcol&&v.n&&r===b.i){const x1=X(2,cy)+8,mw=X(3,cy)-x1-8;let sz=24;while(sz>14&&g.w(v.n,sz)>mw)sz--;g.text(v.n,x1,base,sz,'left')}
       const pc=PCOL[v.p];if(pc!=null)g.text('X',(X(pc,cy)+X(pc+1,cy))/2,base,32,'center');
       if(v.m!=null)g.text(String(v.m),(X(6,cy)+X(7,cy))/2,base,32,'center');
       if(v.s!=null)g.text(String(v.s),(X(7,cy)+X(8,cy))/2,base,32,'center');
@@ -331,7 +346,12 @@ async function makePdf(){
   return doc;
 }
 $('pdf').onclick=async()=>{if(!window.jspdf){toast('PDF-module niet geladen');return}download(`activiteiten-${date}.pdf`,(await makePdf()).output('blob'))};
-$('print').onclick=async()=>{if(!window.jspdf){toast('PDF-module niet geladen');return}const d=await makePdf();d.autoPrint();window.open(d.output('bloburl'),'_blank')};
+$('print').onclick=async()=>{
+  const c=document.createElement('canvas');c.width=W0;c.height=H0;await renderCanvas(c);
+  const im=$('printimg');await new Promise(res=>{im.onload=res;im.src=c.toDataURL('image/jpeg',.92)});
+  window.print();
+};
+$('fg').onchange=()=>{settings={...settings,formGarmin:$('fg').checked};saveSettings();drawPreview()};
 $('png').onclick=async()=>{const c=document.createElement('canvas');c.width=W0;c.height=H0;await renderCanvas(c);c.toBlob(b=>b&&download(`activiteiten-${date}.png`,b),'image/png')};
 
 /* ---------- trends ---------- */
@@ -371,7 +391,7 @@ function drawTrend(){
 const ro=new ResizeObserver(()=>{if(route()==='trends'&&trend.length)drawTrend()});ro.observe($('f1'));
 
 /* ---------- instellingen ---------- */
-function renderFavs(){$('flist').innerHTML=settings.favs.map((f,k)=>`<li><span>${esc(f.a)}</span><span class="pk ${esc(f.p)}" style="flex:none">${esc(PN[f.p]||'')}</span><button class="x" data-k="${k}" aria-label="Verwijder ${esc(f.a)}">×</button></li>`).join('');$('naam').value=settings.naam||''}
+function renderFavs(){$('flist').innerHTML=settings.favs.map((f,k)=>`<li><span>${esc(f.a)}</span><span class="pk ${esc(f.p)}" style="flex:none">${esc(PN[f.p]||'')}</span><button class="x" data-k="${k}" aria-label="Verwijder ${esc(f.a)}">×</button></li>`).join('');$('naam').value=settings.naam||'';$('fg').checked=settings.formGarmin!==false}
 $('flist').addEventListener('click',e=>{const b=e.target.closest('.x');if(!b)return;settings={...settings,favs:settings.favs.filter((_,k)=>k!==+b.dataset.k)};saveSettings();renderFavs()});
 $('fadd').onclick=()=>{const a=$('fa').value.trim();if(!a)return;settings={...settings,favs:[...settings.favs,{a,p:$('fp').value}]};$('fa').value='';saveSettings();renderFavs()};
 let nt;$('naam').addEventListener('input',()=>{clearTimeout(nt);nt=setTimeout(()=>{settings={...settings,naam:$('naam').value.trim()};saveSettings()},700)});

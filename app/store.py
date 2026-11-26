@@ -85,6 +85,7 @@ def all_days(start=None, end=None):
 
 DEFAULT_SETTINGS = {
     "naam": "",
+    "formGarmin": True,
     "favs": [
         {"a": "Slapen", "p": "L"}, {"a": "Rusten", "p": "L"}, {"a": "Ontbijt", "p": "Z"},
         {"a": "Douchen/aankleden", "p": "S"}, {"a": "Werken", "p": "Z"}, {"a": "Lunch", "p": "Z"},
@@ -108,7 +109,8 @@ def put_settings(s):
     for f in s.get("favs", [])[:60]:
         if isinstance(f, dict) and str(f.get("a", "")).strip():
             favs.append({"a": str(f["a"]).strip()[:80], "p": f.get("p") if f.get("p") in ("L", "Z", "S") else "Z"})
-    clean = {"naam": str(s.get("naam", "")).strip()[:80], "favs": favs}
+    clean = {"naam": str(s.get("naam", "")).strip()[:80], "favs": favs,
+             "formGarmin": bool(s.get("formGarmin", True))}
     with _lock, _conn() as c:
         c.execute("INSERT INTO settings(k,v) VALUES('main',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v",
                   (json.dumps(clean),))
