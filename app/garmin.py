@@ -5,6 +5,7 @@ Endpoints volgens Garmins Personal API-documentatie (Swagger, versie 1.0.0).
 """
 import json
 import os
+import re
 import time
 from datetime import date as Date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -24,24 +25,36 @@ class GarminError(Exception):
     pass
 
 
+KEY_FILE = store.DATA_DIR / "garmin-api-key"
+
+
+def key_source():
+    """'ui' (ingevuld in de app), 'env' (/etc/activiteiten.env) of None."""
+    if KEY_FILE.exists() and KEY_FILE.read_text().strip():
+        return "ui"
+    if os.environ.get("GARMIN_API_KEY", "").strip():
+        return "env"
+    return None
+
+
 def _api_key():
+    if key_source() == "ui":
+        return KEY_FILE.read_text().strip()
     k = os.environ.get("GARMIN_API_KEY", "").strip()
     if not k:
-        raise GarminError("GARMIN_API_KEY ontbreekt in /etc/activiteiten.env")
+        raise GarminError("Er is nog geen Garmin-sleutel ingesteld")
     return k
 
 
-def _token(force=False):
-    if not force and TOKEN_FILE.exists():
-        try:
-            t = json.loads(TOKEN_FILE.read_text())
-            if t.get("exp", 0) > time.time() + 300:
-                return t["token"]
-        except (ValueError, KeyError):
-            pass
-    r = httpx.post(TOKEN_URL, headers={"Authorization": "ApiKey " + _api_key()}, timeout=30)
+def _fetch_token(key):
+    try:
+        r = httpx.post(TOKEN_URL, headers={"Authorization": "ApiKey " + key}, timeout=30)
+    except httpx.HTTPError:
+        raise GarminError("Garmin is niet bereikbaar vanaf de server (netwerk of DNS)") from None
+    if r.status_code in (401, 403):
+        raise GarminError("Garmin weigert de sleutel. Klopt hij en is hij niet verlopen?")
     if r.status_code >= 400:
-        raise GarminError(f"Token ophalen mislukt (HTTP {r.status_code}). Klopt de sleutel en is hij niet verlopen?")
+        raise GarminError(f"Token ophalen mislukt (HTTP {r.status_code})")
     tok, ttl = None, 23 * 3600
     try:
         j = r.json()
@@ -54,9 +67,43 @@ def _token(force=False):
         tok = r.text.strip()
     if not tok:
         raise GarminError("Onbekend antwoord van de token-service (geen token gevonden)")
+    return tok, ttl
+
+
+def _save_token(tok, ttl):
     TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
     TOKEN_FILE.write_text(json.dumps({"token": tok, "exp": time.time() + min(ttl, 23 * 3600)}))
     os.chmod(TOKEN_FILE, 0o600)
+
+
+def set_key(key):
+    """Test de sleutel eerst; bewaar hem alleen als Garmin hem accepteert."""
+    key = key.strip()
+    if not re.fullmatch(r"[A-Za-z0-9._~+/=-]{8,512}", key):
+        raise GarminError("Dit lijkt geen geldige sleutel (onverwachte tekens of lengte)")
+    tok, ttl = _fetch_token(key)
+    KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(key)
+    _save_token(tok, ttl)
+
+
+def clear_key():
+    for f in (KEY_FILE, TOKEN_FILE):
+        f.unlink(missing_ok=True)
+
+
+def _token(force=False):
+    if not force and TOKEN_FILE.exists():
+        try:
+            t = json.loads(TOKEN_FILE.read_text())
+            if t.get("exp", 0) > time.time() + 300:
+                return t["token"]
+        except (ValueError, KeyError):
+            pass
+    tok, ttl = _fetch_token(_api_key())
+    _save_token(tok, ttl)
     return tok
 
 
@@ -229,16 +276,25 @@ def build_day(day: Date):
     return out
 
 
-def sync(days=2, end=None):
+def sync(days=2, end=None, progress=None):
     """Haal `days` dagen op t/m `end` (standaard vandaag) en sla ze op."""
     end = end or datetime.now(TZ).date()
-    _token()  # faalt vroeg met een duidelijke melding
-    done = []
-    for k in range(days):
-        d = end - timedelta(days=k)
-        data = build_day(d)
-        store.put_garmin(d.isoformat(), data)
-        done.append((d.isoformat(), data["errors"]))
+    try:
+        _token()  # faalt vroeg met een duidelijke melding
+        done = []
+        for k in range(days):
+            d = end - timedelta(days=k)
+            data = build_day(d)
+            store.put_garmin(d.isoformat(), data)
+            done.append((d.isoformat(), data["errors"]))
+            if progress:
+                progress(k + 1, days)
+    except GarminError as e:
+        store.put_kv("garmin_status", {"ok": False, "at": time.time(), "error": str(e)})
+        raise
+    errs = [e for _, es in done for e in es]
+    store.put_kv("garmin_status", {"ok": not errs, "at": time.time(),
+                                   "error": ("; ".join(errs[:3]) if errs else None)})
     return done
 
 

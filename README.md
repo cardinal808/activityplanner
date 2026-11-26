@@ -22,27 +22,17 @@ Bijwerken later: `cd /root/activityplanner && git pull && ./install.sh`. Je data
 
 ## 3. Instellen
 
+Open `http://<ip-van-de-container>:8080`, ga naar **Instellingen → Garmin-koppeling** en plak je persoonlijke API-sleutel. Die maak je in Garmin Connect Web via Personal API Key → Create Key; kies eerst 30 dagen om te testen. De app test de sleutel bij Garmin en bewaart hem alleen als hij werkt, in `/var/lib/activiteiten/garmin-api-key`, leesbaar voor alleen de service. Daarna haalt de app meteen de afgelopen week op. Meer geschiedenis haal je op met "Geschiedenis ophalen".
+
+Zet daarnaast een wachtwoord voor de webpagina in `/etc/activiteiten.env` (`APP_PASSWORD`, gebruiker `APP_USER`) en herstart met `systemctl restart activiteiten`. Zonder wachtwoord kan iedereen op je netwerk je gegevens zien en de sleutel vervangen. Uitlezen kan niemand: de sleutel wordt nooit teruggestuurd.
+
+De sleutel in `/etc/activiteiten.env` zetten (`GARMIN_API_KEY`) kan nog steeds. Een sleutel die je in de interface invult gaat daarvoor.
+
+Technische test van de koppeling. Die toont alleen welke velden Garmin teruggeeft, geen waarden:
+
 ```sh
-nano /etc/activiteiten.env
-```
-
-- `GARMIN_API_KEY`: je persoonlijke sleutel. Maak die aan in Garmin Connect Web via Personal API Key → Create Key. Kies eerst 30 dagen om te testen.
-- `APP_PASSWORD`: wachtwoord voor de webpagina (gebruiker: `APP_USER`). Sterk aanbevolen.
-
-Herstart daarna de app en test de Garmin-koppeling:
-
-```sh
-systemctl restart activiteiten
 cd /opt/activiteiten && sudo -u activiteiten sh -c 'set -a; . /etc/activiteiten.env; venv/bin/python -m app.sync test'
 ```
-
-De test laat alleen zien welke velden Garmin teruggeeft, niet je gezondheidswaarden. Werkt het? Haal dan je geschiedenis op:
-
-```sh
-sudo -u activiteiten sh -c 'set -a; . /etc/activiteiten.env; cd /opt/activiteiten; venv/bin/python -m app.sync --days 60'
-```
-
-Daarna haalt de timer elk uur vandaag en gisteren op.
 
 ## 4. Gebruiken
 
@@ -70,5 +60,5 @@ Thuis via je lokale netwerk. Onderweg het liefst via **Tailscale** (installeer h
 ## Goed om te weten
 
 - Garmin levert stappen alleen als dagtotaal, niet per kwartier. "Staan/lopen" wordt daarom alleen voorgesteld voor activiteiten die je op je horloge hebt opgenomen, zoals een wandeling. "Liggen" komt uit slaap en dutjes.
-- Een persoonlijke API-sleutel verloopt (30 dagen tot 1 jaar). Garmin mailt je vooraf; zet de nieuwe sleutel in `/etc/activiteiten.env` en herstart.
+- Een persoonlijke API-sleutel verloopt (30 dagen tot 1 jaar). Garmin mailt je vooraf; plak de nieuwe sleutel bij Instellingen. Bij Instellingen zie je ook wanneer er voor het laatst is opgehaald, en of dat lukte.
 - De Garmin-endpoints komen uit Garmins Personal API-documentatie (versie 1.0.0). Werkt een onderdeel niet, dan staat dat in de log en blijft de rest gewoon werken.

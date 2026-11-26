@@ -7,6 +7,9 @@ from . import garmin, store
 
 def main(argv):
     store.init()
+    if not garmin.key_source():
+        print("Geen Garmin-sleutel ingesteld; niets te doen.")
+        return 0
     if argv[:1] == ["test"]:
         garmin.test()
         return 0

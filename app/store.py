@@ -133,3 +133,15 @@ def garmin_range(start, end):
         rows = c.execute("SELECT date, data FROM garmin WHERE date BETWEEN ? AND ? ORDER BY date",
                          (start, end)).fetchall()
     return {r["date"]: json.loads(r["data"]) for r in rows}
+
+
+def get_kv(k):
+    with _conn() as c:
+        r = c.execute("SELECT v FROM settings WHERE k=?", ("kv:" + k,)).fetchone()
+    return json.loads(r["v"]) if r else None
+
+
+def put_kv(k, v):
+    with _lock, _conn() as c:
+        c.execute("INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v",
+                  ("kv:" + k, json.dumps(v)))

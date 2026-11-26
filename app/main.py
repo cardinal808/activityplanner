@@ -5,6 +5,9 @@ import io
 import os
 import re
 import secrets
+import threading
+import time
+from urllib.parse import urlsplit
 from datetime import date as Date, timedelta
 
 from fastapi import FastAPI, HTTPException, Request
@@ -37,6 +40,11 @@ async def basic_auth(request: Request, call_next):
                 ok = False
         if not ok:
             return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Activiteiten"'})
+    # Wijzigingen alleen vanaf de eigen pagina (voorkomt dat een andere website iets namens jou instuurt).
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        origin = request.headers.get("origin")
+        if origin and urlsplit(origin).netloc != request.headers.get("host", ""):
+            return Response(status_code=403)
     resp = await call_next(request)
     resp.headers["Cache-Control"] = "no-store"
     resp.headers["X-Content-Type-Options"] = "nosniff"
@@ -77,9 +85,53 @@ async def put_settings(request: Request):
     return store.put_settings(await request.json())
 
 
+_hist = {"running": False, "done": 0, "total": 0}
+
+
 @app.get("/api/garmin/status")
 def garmin_status():
-    return {"configured": bool(os.environ.get("GARMIN_API_KEY", "").strip())}
+    src = garmin.key_source()
+    return {"configured": bool(src), "source": src, "last": store.get_kv("garmin_status"), "history": _hist}
+
+
+@app.put("/api/garmin/key")
+async def garmin_key(request: Request):
+    body = await request.json()
+    try:
+        await run_in_threadpool(garmin.set_key, str(body.get("key", "")))
+    except garmin.GarminError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    _start_history(7)  # meteen de afgelopen week binnenhalen
+    return garmin_status()
+
+
+@app.delete("/api/garmin/key")
+def garmin_key_delete():
+    garmin.clear_key()
+    return garmin_status()
+
+
+@app.post("/api/garmin/history")
+async def garmin_history(request: Request):
+    _start_history(max(1, min(365, int((await request.json()).get("days", 30)))))
+    return garmin_status()
+
+
+def _start_history(days):
+    if _hist["running"]:
+        return
+
+    def run():
+        _hist.update(running=True, done=0, total=days)
+        try:
+            garmin.sync(days, progress=lambda d, t: _hist.update(done=d))
+        except garmin.GarminError:
+            pass
+        finally:
+            _hist["running"] = False
+
+    _hist.update(running=True, done=0, total=days)
+    threading.Thread(target=run, daemon=True).start()
 
 
 @app.post("/api/garmin/sync/{d}")

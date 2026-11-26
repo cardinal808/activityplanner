@@ -57,7 +57,7 @@ nav a.on{color:var(--ink);border-color:var(--pen)}
 .sheet h2{font-size:22px;margin:0 0 10px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 label.f{display:block;font-size:14px;color:var(--mute);font-weight:600;margin:14px 0 6px}
-select,input[type=text]{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px;font-size:16px}
+select,input[type=text],input[type=password]{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px;font-size:16px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{border:1px solid var(--line);background:var(--soft);border-radius:20px;padding:0 14px;min-height:38px;font-size:15px}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -71,7 +71,7 @@ select,input[type=text]{width:100%;height:46px;border:1px solid var(--line);bord
 .chk{display:flex;gap:10px;align-items:center;margin-top:12px;min-height:44px}
 .chk input{width:22px;height:22px}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
-.btn{height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:700;text-decoration:none;display:inline-flex;align-items:center}
+.btn{color:var(--ink);height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:700;text-decoration:none;display:inline-flex;align-items:center}
 .btn.pri{background:var(--pen);border-color:var(--pen);color:var(--bg)}
 .sheet .btn.pri{flex:1;justify-content:center}
 .btn.del{color:#c0392b}
@@ -145,6 +145,15 @@ th{color:var(--mute);font-weight:600}th:first-child,td:first-child{text-align:le
     <div class="card"><h3>Favorieten</h3><p class="note">Tik in het invulscherm op een favoriet om activiteit en houding in één keer te kiezen.</p>
       <div class="row" style="grid-template-columns:1fr 130px 100px;margin-top:8px"><input type="text" id="fa" placeholder="Nieuwe activiteit"><select id="fp"><option value="L">Liggen</option><option value="Z" selected>Zitten</option><option value="S">Staan/lopen</option></select><button class="btn" id="fadd">Toevoegen</button></div>
       <ul class="fl" id="flist"></ul></div>
+    <div class="card"><h3>Garmin-koppeling</h3>
+      <p class="note" id="gst">Status laden…</p>
+      <label class="f" for="gkey">Persoonlijke API-sleutel</label>
+      <input type="password" id="gkey" autocomplete="off" spellcheck="false" placeholder="Plak hier je sleutel">
+      <p class="note">Maak de sleutel aan in Garmin Connect op internet, via Personal API Key → Create Key. De sleutel wordt eerst bij Garmin getest en alleen op deze server bewaard; hij wordt nooit meer getoond.</p>
+      <div class="acts"><button class="btn pri" id="gsave">Opslaan en testen</button><button class="btn del" id="gdel" hidden>Sleutel verwijderen</button></div>
+      <div id="ghist" hidden><label class="f" for="gdays">Geschiedenis ophalen</label>
+        <div class="acts" style="margin-top:0"><select id="gdays" style="width:auto"><option value="14">14 dagen</option><option value="30" selected>30 dagen</option><option value="90">90 dagen</option></select><button class="btn" id="ghgo">Ophalen</button></div></div>
+    </div>
     <div class="card"><h3>Gegevens</h3><p class="note">Alle dagen als CSV. Met importeren haal je de CSV uit de claude.ai-versie binnen; bestaande vakjes worden niet overschreven.</p>
       <div class="acts"><a class="btn" href="/api/export.csv">Download alle dagen (CSV)</a><label class="btn">CSV importeren<input type="file" id="imp" accept=".csv,text/csv" hidden></label></div></div>
   </section>
@@ -368,10 +377,34 @@ $('fadd').onclick=()=>{const a=$('fa').value.trim();if(!a)return;settings={...se
 let nt;$('naam').addEventListener('input',()=>{clearTimeout(nt);nt=setTimeout(()=>{settings={...settings,naam:$('naam').value.trim()};saveSettings()},700)});
 $('imp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const r=await fetch('/api/import',{method:'POST',body:await f.text(),headers:{'Content-Type':'text/csv'}});const j=await r.json();toast(`${j.dagen} dagen geïmporteerd`);loadDay()}catch(x){toast('Importeren mislukt')}e.target.value=''};
 
+/* ---------- Garmin-instellingen ---------- */
+const ago=t=>{const m=Math.round((Date.now()/1000-t)/60);return m<1?'zojuist':m<60?m+' min geleden':m<1440?Math.round(m/60)+' uur geleden':new Date(t*1000).toLocaleDateString('nl-NL')};
+let hpoll=null,wasRunning=false;
+function renderGarmin(st){
+  gConf=st.configured;
+  const l=st.last,h=st.history||{};
+  let t=!st.configured?'Nog niet gekoppeld.':st.source==='env'?'Gekoppeld via /etc/activiteiten.env. Een sleutel die je hier invult gaat daarvoor.':'Gekoppeld.';
+  if(st.configured&&l)t+=l.ok?` Laatst opgehaald: ${ago(l.at)}.`:` Laatste poging ${ago(l.at)} mislukt: ${l.error||'onbekende fout'}`;
+  if(h.running)t+=` Geschiedenis ophalen: ${h.done} van ${h.total} dagen…`;
+  $('gst').textContent=t;
+  $('gdel').hidden=st.source!=='ui';$('ghist').hidden=!st.configured;$('ghgo').disabled=!!h.running;
+  clearTimeout(hpoll);if(h.running)hpoll=setTimeout(()=>api('/api/garmin/status').then(renderGarmin).catch(()=>{}),3000);
+  else if(wasRunning){loadDay();toast('Geschiedenis opgehaald')}
+  wasRunning=!!h.running;
+  render();
+}
+$('gsave').onclick=async()=>{const k=$('gkey').value.trim();if(!k){$('gkey').focus();return}
+  const b=$('gsave');b.disabled=true;b.textContent='Testen…';
+  try{renderGarmin(await api('/api/garmin/key',{method:'PUT',body:JSON.stringify({key:k})}));$('gkey').value='';toast('Sleutel werkt en is opgeslagen')}
+  catch(e){toast(e.message)}finally{b.disabled=false;b.textContent='Opslaan en testen'}};
+$('gdel').onclick=async()=>{if($('gdel').dataset.sure!=='1'){$('gdel').dataset.sure='1';$('gdel').textContent='Zeker weten? Tik nogmaals';setTimeout(()=>{$('gdel').dataset.sure='';$('gdel').textContent='Sleutel verwijderen'},4000);return}
+  try{renderGarmin(await api('/api/garmin/key',{method:'DELETE'}));toast('Sleutel verwijderd')}catch(e){toast(e.message)}};
+$('ghgo').onclick=async()=>{try{renderGarmin(await api('/api/garmin/history',{method:'POST',body:JSON.stringify({days:+$('gdays').value})}))}catch(e){toast(e.message)}};
+
 /* ---------- start ---------- */
 show();loadDay();
 api('/api/settings').then(s=>{settings=s;renderFavs()}).catch(()=>{});
-api('/api/garmin/status').then(s=>{gConf=s.configured;render()}).catch(()=>{});
+api('/api/garmin/status').then(renderGarmin).catch(()=>{$('gst').textContent='Status niet beschikbaar.'});
 }
 </script>
 </body>
