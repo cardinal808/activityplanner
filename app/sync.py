@@ -17,8 +17,19 @@ def main(argv):
     if "--days" in argv:
         days = max(1, min(365, int(argv[argv.index("--days") + 1])))
     try:
-        for d, errs in garmin.sync(days=days):
+        if "--days" in argv:
+            store.put_kv("backfill", {"days": days})
+            done, complete = garmin.sync(days=days, skip_complete=True)
+        else:
+            done, complete = garmin.sync(days=2)
+            if complete:
+                more = garmin.backfill()
+                if more is not None:
+                    print("Geschiedenis:", "compleet" if more else "deels, volgende keer verder")
+        for d, errs in done:
             print(d, "OK" if not errs else "deels: " + "; ".join(errs))
+        if not complete:
+            print("Garmin-limiet bereikt; de timer gaat elk uur verder met de rest.")
     except garmin.GarminError as e:
         print("Fout:", e, file=sys.stderr)
         return 1

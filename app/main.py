@@ -124,7 +124,10 @@ def _start_history(days):
     def run():
         _hist.update(running=True, done=0, total=days)
         try:
-            garmin.sync(days, progress=lambda d, t: _hist.update(done=d))
+            store.put_kv("backfill", {"days": days})
+            _, complete = garmin.sync(days, progress=lambda d, t: _hist.update(done=d), skip_complete=True)
+            if complete:
+                store.put_kv("backfill", None)
         except garmin.GarminError:
             pass
         finally:

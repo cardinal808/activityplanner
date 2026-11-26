@@ -61,4 +61,5 @@ Thuis via je lokale netwerk. Onderweg het liefst via **Tailscale** (installeer h
 
 - Garmin levert stappen alleen als dagtotaal, niet per kwartier. "Staan/lopen" wordt daarom alleen voorgesteld voor activiteiten die je op je horloge hebt opgenomen, zoals een wandeling. "Liggen" komt uit slaap en dutjes.
 - Een persoonlijke API-sleutel verloopt (30 dagen tot 1 jaar). Garmin mailt je vooraf; plak de nieuwe sleutel bij Instellingen. Bij Instellingen zie je ook wanneer er voor het laatst is opgehaald, en of dat lukte.
+- Garmin begrenst het aantal verzoeken (HTTP 429). De app wacht dan even en gaat de volgende keer verder: elk uur haalt de timer een stuk van de gevraagde geschiedenis op, tot alles binnen is. Een dag met fouten overschrijft nooit eerder opgehaalde, betere gegevens.
 - De Garmin-endpoints komen uit Garmins Personal API-documentatie (versie 1.0.0). Werkt een onderdeel niet, dan staat dat in de log en blijft de rest gewoon werken.

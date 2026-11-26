@@ -25,6 +25,21 @@ class GarminError(Exception):
     pass
 
 
+class RateLimited(GarminError):
+    """Garmin antwoordt 429: te veel verzoeken. Later verder gaan."""
+
+
+MIN_INTERVAL = float(os.environ.get("GARMIN_MIN_INTERVAL", "1.5"))  # seconden tussen verzoeken
+_last_req = [0.0]
+
+
+def _pace():
+    wait = _last_req[0] + MIN_INTERVAL - time.monotonic()
+    if wait > 0:
+        time.sleep(wait)
+    _last_req[0] = time.monotonic()
+
+
 KEY_FILE = store.DATA_DIR / "garmin-api-key"
 
 
@@ -108,11 +123,24 @@ def _token(force=False):
 
 
 def get(path, params=None):
-    for attempt in (0, 1):
+    refreshed, waits = False, 0
+    while True:
+        _pace()
         r = httpx.get(BASE + path, params=params,
-                      headers={"Authorization": "Bearer " + _token(force=attempt == 1), "Accept": "application/json"},
+                      headers={"Authorization": "Bearer " + _token(force=refreshed), "Accept": "application/json"},
                       timeout=45)
-        if r.status_code == 401 and attempt == 0:
+        if r.status_code == 401 and not refreshed:
+            refreshed = True
+            continue
+        if r.status_code == 429:
+            if waits >= 2:
+                raise RateLimited("Garmin-limiet bereikt (te veel verzoeken)")
+            try:
+                ra = int(r.headers.get("retry-after", ""))
+            except ValueError:
+                ra = 30 * (waits + 1)
+            time.sleep(max(5, min(ra, 90)))
+            waits += 1
             continue
         if r.status_code == 204 or not r.content:
             return None
@@ -183,7 +211,8 @@ def _cols(descriptors, idx_key, name_key):
 SITTING_TYPES = ("cycling", "indoor_cycling", "rowing", "indoor_rowing", "driving", "kayak", "e_bike")
 
 
-def build_day(day: Date):
+def build_day(day: Date, cache=None):
+    cache = {} if cache is None else cache
     ds, errors = day.isoformat(), []
     out = {"date": ds, "fetched": time.time(), "sleep": [], "naps": [], "activities": [],
            "bb": [None] * N, "hr": [None] * N, "steps": None, "stress": None,
@@ -192,7 +221,9 @@ def build_day(day: Date):
     # Slaap: de nacht vóór deze dag (record van `day`) en de nacht erna (record van day+1).
     for d in (day, day + timedelta(days=1)):
         try:
-            sl = get("/sleep-service/sleep/dailySleep", {"date": d.isoformat()}) or {}
+            if d not in cache:
+                cache[d] = get("/sleep-service/sleep/dailySleep", {"date": d.isoformat()}) or {}
+            sl = cache[d]
             iv = _interval(to_local(sl.get("sleepStartTimestampGMT")), to_local(sl.get("sleepEndTimestampGMT")), day, "Slapen")
             if iv:
                 out["sleep"].append(iv)
@@ -202,6 +233,8 @@ def build_day(day: Date):
                 iv = _interval(to_local(nap.get("napStartTimestampGMT")), to_local(nap.get("napEndTimestampGMT")), day, "Dutje")
                 if iv:
                     out["naps"].append(iv)
+        except RateLimited:
+            raise
         except Exception as e:  # noqa: BLE001
             errors.append(f"slaap {d}: {e}")
 
@@ -220,6 +253,8 @@ def build_day(day: Date):
                 iv["type"] = key
                 iv["p"] = "Z" if any(k in key for k in SITTING_TYPES) else "S"
                 out["activities"].append(iv)
+    except RateLimited:
+        raise
     except Exception as e:  # noqa: BLE001
         errors.append(f"activiteiten: {e}")
 
@@ -237,6 +272,8 @@ def build_day(day: Date):
         lv = [v for _, v in rows]
         if lv:
             out["bb_min"], out["bb_max"] = min(lv), max(lv)
+    except RateLimited:
+        raise
     except Exception as e:  # noqa: BLE001
         errors.append(f"Body Battery: {e}")
 
@@ -248,6 +285,8 @@ def build_day(day: Date):
                 if isinstance(r, list) and len(r) > max(ti, vi) and isinstance(r[vi], (int, float))]
         out["hr"] = _slot_means(rows, day)
         out["rhr"] = hr.get("restingHeartRate")
+    except RateLimited:
+        raise
     except Exception as e:  # noqa: BLE001
         errors.append(f"hartslag: {e}")
 
@@ -258,6 +297,8 @@ def build_day(day: Date):
         if su.get("lastNightAvg") is not None:
             out["hrv"] = {"night": su.get("lastNightAvg"), "week": su.get("weeklyAvg"), "status": su.get("status"),
                           "low": bl.get("balancedLow"), "high": bl.get("balancedUpper")}
+    except RateLimited:
+        raise
     except Exception as e:  # noqa: BLE001
         errors.append(f"HRV: {e}")
 
@@ -270,32 +311,69 @@ def build_day(day: Date):
             bb = d0.get("bodyBattery") or {}
             out["bb_min"] = out["bb_min"] if out["bb_min"] is not None else bb.get("minValue")
             out["bb_max"] = out["bb_max"] if out["bb_max"] is not None else bb.get("maxValue")
+    except RateLimited:
+        raise
     except Exception as e:  # noqa: BLE001
         errors.append(f"dagsamenvatting: {e}")
 
     return out
 
 
-def sync(days=2, end=None, progress=None):
-    """Haal `days` dagen op t/m `end` (standaard vandaag) en sla ze op."""
-    end = end or datetime.now(TZ).date()
+def _better(new, old):
+    """Nieuwe data alleen opslaan als die niet slechter is dan wat er al ligt."""
+    return old is None or len(new["errors"]) <= len(old.get("errors") or [])
+
+
+def sync(days=2, end=None, progress=None, skip_complete=False, max_fetch=None):
+    """Haal `days` dagen op t/m `end` (standaard vandaag), nieuwste eerst.
+
+    skip_complete: dagen ouder dan gisteren die al foutloos binnen zijn overslaan.
+    max_fetch: maximaal zoveel dagen echt ophalen (om binnen Garmins limiet te blijven).
+    Geeft (resultaten, compleet) terug; compleet is False als er nog dagen openstaan.
+    """
+    today = datetime.now(TZ).date()
+    end = end or today
+    done, fetched, cache = [], 0, {}
     try:
         _token()  # faalt vroeg met een duidelijke melding
-        done = []
         for k in range(days):
             d = end - timedelta(days=k)
-            data = build_day(d)
-            store.put_garmin(d.isoformat(), data)
+            old = store.get_garmin(d.isoformat())
+            if skip_complete and d < today - timedelta(days=1) and old and not old.get("errors"):
+                if progress:
+                    progress(k + 1, days)
+                continue
+            if max_fetch is not None and fetched >= max_fetch:
+                return done, False
+            data = build_day(d, cache)
+            fetched += 1
+            if _better(data, old):
+                store.put_garmin(d.isoformat(), data)
             done.append((d.isoformat(), data["errors"]))
             if progress:
                 progress(k + 1, days)
+    except RateLimited:
+        store.put_kv("garmin_status", {"ok": False, "at": time.time(),
+                                       "error": f"Garmin-limiet bereikt na {fetched} dagen; de rest wordt elk uur automatisch verder opgehaald"})
+        return done, False
     except GarminError as e:
         store.put_kv("garmin_status", {"ok": False, "at": time.time(), "error": str(e)})
         raise
     errs = [e for _, es in done for e in es]
     store.put_kv("garmin_status", {"ok": not errs, "at": time.time(),
                                    "error": ("; ".join(errs[:3]) if errs else None)})
-    return done
+    return done, True
+
+
+def backfill(max_fetch=10):
+    """Vervolg een eerder gevraagde geschiedenis in kleine stukken (vanuit de timer)."""
+    bf = store.get_kv("backfill")
+    if not bf or not bf.get("days"):
+        return None
+    _, complete = sync(int(bf["days"]), skip_complete=True, max_fetch=max_fetch)
+    if complete:
+        store.put_kv("backfill", None)
+    return complete
 
 
 # ---------- test: alleen de vorm van de antwoorden, geen waarden ----------
